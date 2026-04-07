@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NONIOAEY SHOP</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+        }
+        .miku-button {
+            background: #39c5bb;
+            box-shadow: 0 8px 32px 0 rgba(57, 197, 187, 0.3);
+        }
+        #admin-section { display: none; } /* ซ่อนส่วนแอดมินไว้เป็นค่าเริ่มต้น */
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="glass p-6 mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">🩵 NONIOAEY SHOP</h1>
+            <p class="text-gray-600 font-medium">รวมไอดีเกมราคาดีที่สุด</p>
+        </header>
+
+        <section id="admin-section" class="glass p-6 mb-8 border-2 border-cyan-400">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">⚙️ แผงควบคุมแอดมิน</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <input type="text" id="name" placeholder="ชื่อไอดีเกม" class="w-full p-3 rounded-xl border-none bg-white/50 outline-none">
+                <input type="number" id="price" placeholder="ราคา" class="w-full p-3 rounded-xl border-none bg-white/50 outline-none">
+                <input type="text" id="image" placeholder="ลิงก์รูปภาพ" class="w-full p-3 rounded-xl border-none bg-white/50 outline-none">
+                <button onclick="addItem()" class="miku-button w-full text-white font-bold p-3 rounded-xl">เพิ่มรหัสเกมเข้าหน้าเว็บ</button>
+                <button onclick="toggleAdmin()" class="text-gray-500 text-sm">ปิดโหมดแอดมิน</button>
+            </div>
+        </section>
+
+        <div id="product-list" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            </div>
+    </div>
+
+    <button onclick="askPassword()" class="fixed bottom-4 right-4 w-8 h-8 opacity-20 hover:opacity-100 transition-opacity">🔐</button>
+
+    <script>
+        const supabaseUrl = 'https://asanasmmftjrgoucnjai.supabase.co';
+        const supabaseKey = 'sb_publishable_fvX2_BKJRoRSQ0ahprnIiA_TXwSWMt-';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let isAdmin = false;
+
+        // ฟังก์ชันถามรหัสผ่าน
+        function askPassword() {
+            const pass = prompt("ใส่รหัสผ่านแอดมินเอย:");
+            if (pass === "1234") { // เปลี่ยนรหัสตรงนี้ได้ตามใจชอบเลยนะเอย
+                toggleAdmin();
+            } else {
+                alert("รหัสไม่ถูกนะจ๊ะ");
+            }
+        }
+
+        function toggleAdmin() {
+            isAdmin = !isAdmin;
+            document.getElementById('admin-section').style.display = isAdmin ? 'block' : 'none';
+            loadProducts(); // รีโหลดเพื่อโชว์/ซ่อนปุ่มลบ
+        }
+
+        async function loadProducts() {
+            const { data, error } = await _supabase.from('products').select('*').order('id', { ascending: false });
+            if (error) return;
+            
+            const list = document.getElementById('product-list');
+            list.innerHTML = data.map(item => `
+                <div class="glass overflow-hidden flex flex-col h-full">
+                    <img src="${item.image}" class="w-full h-52 object-cover" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
+                    <div class="p-5 flex-grow">
+                        <h3 class="font-bold text-lg text-gray-800">${item.name}</h3>
+                        <p class="text-cyan-600 font-bold text-2xl mt-2">${item.price} บาท</p>
+                        ${isAdmin ? `<button onclick="deleteItem(${item.id})" class="bg-red-100 text-red-500 px-3 py-1 rounded-lg text-sm mt-4">ลบโพสต์</button>` : ''}
+                    </div>
+                    <div class="p-5 pt-0">
+                         <a href="https://line.me" class="block text-center miku-button text-white font-bold py-2 rounded-xl text-sm">สนใจสั่งซื้อ</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addItem() {
+            const name = document.getElementById('name').value;
+            const price = document.getElementById('price').value;
+            const image = document.getElementById('image').value;
+            if(!name || !price) return alert('ใส่ข้อมูลให้ครบก่อนนะ');
+
+            const { error } = await _supabase.from('products').insert([{ name, price, image }]);
+            if (!error) {
+                alert('เพิ่มข้อมูลแล้ว!');
+                document.getElementById('name').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('image').value = '';
+                loadProducts();
+            }
+        }
+
+        async function deleteItem(id) {
+            if(confirm('จะลบจริงเหรอเอย?')) {
+                await _supabase.from('products').delete().eq('id', id);
+                loadProducts();
+            }
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>
